@@ -68,7 +68,7 @@ pf2 <- squarem(par=p0, y=y, fixptfn=poissmix.em, objfn=poissmix.loglik,
                control=list(tol=tol,trace=TRUE))
 toc()
 
-sourceCpp("SQUAREM.cpp")
+sourceCpp("R_SQUAREM.cpp")
 tic()
 pf3 <- cxxSQUAREM(p0,y,fixptfn=poissmix.em,objfn=poissmix.loglik)           
 toc()
