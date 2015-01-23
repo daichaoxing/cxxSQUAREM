@@ -46,7 +46,7 @@ List cyclem2(NumericVector par,Function fixptfn);
 */
 
 // [[Rcpp::export]]
-Rcpp::List SQUAREM(NumericVector par,NumericVector testingY,Function fixptfn,Function objfn=NULL)
+Rcpp::List cxxSQUAREM(NumericVector par,NumericVector testingY,Function fixptfn,Function objfn=NULL)
 {
     //char fff_strings[1024];
     //va_list argptr;
