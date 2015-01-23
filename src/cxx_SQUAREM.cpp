@@ -1,22 +1,20 @@
 //TODO:
-//1. example of fixptfn and objfn need to be added
+//1. example of fixptfn and objfn need to be added 1. Done
 //2. create class object
 //3. cyclem equivalent
 //4. combine squarem1&2 by defining the default objfn
-
+//5. matrix/vector operation without loop
 #include <iostream>
-#include <string>
 #include <algorithm>
-//#include <Rcpp.h>//A pure c++ SQUAREM
 #include <cmath>
 #include <math.h>
 #include <vector>
-#include <string>
-#include <cstring>
-//#include <stdarg.h>
+#include <numeric>
 
-using namespace std;//Rcpp;
 
+using namespace std;
+
+//Global Control Variable
 struct SquaremControl{
     int K=1;
     int method=3;//1,2,3 indicates the types of step length to be used in squarem1,squarem2, 4,5 for "rre" and "mpe" in cyclem1 and cyclem2,  standing for reduced-rank ("rre") or minimal-polynomial ("mpe") extrapolation.
@@ -33,50 +31,35 @@ struct SquaremControl{
     double tol=1e-7;
 } SquaremDefault;
 
-
+//Output Struct
 struct SquaremOutput{
     std::vector<double> par;
     double valueobjfn;
-    int iter;
-    int pfevals;
-    int objfevals;
-    bool convergence;
+    int iter=0;
+    int pfevals=0;
+    int objfevals=0;
+    bool convergence=false;
 } sqobj,sqobjnull;
 
-vector<double> fixptfn(std::vector<double> par,std::vector<double> testingY){
-    std::vector<double> parnew=par;
-    return parnew;
-};
-double objfn(std::vector<double> par,std::vector<double> testingY){
-    double objvalue=testingY[0];
-    return objvalue;
-};
-
-SquaremOutput squarem1(std::vector<double> par,std::vector<double> testingY);
-/*
-List squarem2(std::vector<double> par,Function fixptfn);
-List cyclem1(std::vector<double> par,Function fixptfn,Function objfn=NULL);
-List cyclem2(std::vector<double> par,Function fixptfn);
-*/
+vector<double> fixptfn(std::vector<double> par);
+double objfn(std::vector<double> par);
+SquaremOutput squarem1(std::vector<double> par);
 
 
-// [[Rcpp::export]]
-SquaremOutput cxxSQUAREM(std::vector<double> par,std::vector<double> testingY)
+//Wrapper function
+SquaremOutput cxxSQUAREM(std::vector<double> par)
 {
     if(SquaremDefault.K == 1){
-        sqobj=squarem1(par,testingY);
+        sqobj=squarem1(par);
     }
     else{
         sqobj=sqobjnull;
     }
-    //int check_result=memcmp(sqobj,sqobjnull,sizeof(sqobj));
-    //if(check_result==0){std::cout<<"Error in fixed-point/objective function evaluation"<<std::endl;}
     return sqobj;
 }
 
-
-// [[Rcpp::export]]
-SquaremOutput squarem1(std::vector<double> par,std::vector<double> testingY){
+//actual acceleration function
+SquaremOutput squarem1(std::vector<double> par){
     //std::vector<double> p,p1,p2;//R data types
     double loldcpp,lnewcpp;
     std::vector<double> pcpp,p1cpp,p2cpp,pnew;
@@ -88,8 +71,8 @@ SquaremOutput squarem1(std::vector<double> par,std::vector<double> testingY){
     stepmax=SquaremDefault.stepmax0;
     if(SquaremDefault.trace){std::cout<<"Squarem-1"<<std::endl;}
     
-    iter=1;pcpp=par;
-    try{loldcpp=objfn(pcpp,testingY);leval=1;}
+    iter=1;pcpp=par;pnew=par;
+    try{loldcpp=objfn(pcpp);leval=1;}
     catch(...){
         std::cout<<"Error in fixptfn function evaluation";
         return sqobjnull;
@@ -98,23 +81,23 @@ SquaremOutput squarem1(std::vector<double> par,std::vector<double> testingY){
     if(SquaremDefault.trace){std::cout<<"Objective fn: "<<loldcpp<<std::endl;}
     feval=0;conv=true;
     
-    long int parvectorlength=pcpp.size();
+    const long int parvectorlength=pcpp.size();
     
     while(feval<SquaremDefault.maxiter){
         //Step 1
         extrap = true;
-        try{p1cpp=fixptfn(pcpp,testingY);feval++;}
+        try{p1cpp=fixptfn(pcpp);feval++;}
         catch(...){
             std::cout<<"Error in fixptfn function evaluation";
             return sqobjnull;
         }
+        
         sr2_scalar=0;
         for (int i=0;i<parvectorlength;i++){sr2_scalar+=pow(p1cpp[i]-pcpp[i],2);}
         if(sqrt(sr2_scalar)<SquaremDefault.tol){break;}
 
-        
         //Step 2
-        try{p2cpp=fixptfn(p1cpp,testingY);feval++;}
+        try{p2cpp=fixptfn(p1cpp);feval++;}
         catch(...){
             std::cout<<"Error in fixptfn function evaluation";
             return sqobjnull;
@@ -143,10 +126,10 @@ SquaremOutput squarem1(std::vector<double> par,std::vector<double> testingY){
         
         //Step 4 stabilization
         if(std::abs(alpha-1)>0.01){
-            try{pnew=fixptfn(pnew,testingY);feval++;}
+            try{pnew=fixptfn(pnew);feval++;}
             catch(...){
                 pnew=p2cpp;
-                try{lnewcpp=objfn(pnew,testingY);leval++;}
+                try{lnewcpp=objfn(pnew);leval++;}
                 catch(...){
                     lnewcpp=loldcpp;
                 }
@@ -165,10 +148,10 @@ SquaremOutput squarem1(std::vector<double> par,std::vector<double> testingY){
             }
             
             if (isfinite(SquaremDefault.objfninc)){
-                try{lnewcpp=objfn(pnew,testingY);leval++;}
+                try{lnewcpp=objfn(pnew);leval++;}
                 catch(...){
                     pnew=p2cpp;
-                    try{lnewcpp=objfn(pnew,testingY);leval++;}
+                    try{lnewcpp=objfn(pnew);leval++;}
                     catch(...){
                         std::cout<<"Error in objfn function evaluation";
                         return sqobjnull;
@@ -182,7 +165,7 @@ SquaremOutput squarem1(std::vector<double> par,std::vector<double> testingY){
             }else{lnewcpp=loldcpp;}
             if (lnewcpp>loldcpp+SquaremDefault.objfninc) {
                 pnew=p2cpp;
-                try{lnewcpp=objfn(pnew,testingY);leval++;}
+                try{lnewcpp=objfn(pnew);leval++;}
                 catch(...){
                     std::cout<<"Error in objfn function evaluation";
                     return sqobjnull;
@@ -195,10 +178,10 @@ SquaremOutput squarem1(std::vector<double> par,std::vector<double> testingY){
             }
         }else{//same as above, when stablization is not performed.
             if (isfinite(SquaremDefault.objfninc)){
-                try{lnewcpp=objfn(pnew,testingY);leval++;}
+                try{lnewcpp=objfn(pnew);leval++;}
                 catch(...){
                     pnew=p2cpp;
-                    try{lnewcpp=objfn(pnew,testingY);leval++;}
+                    try{lnewcpp=objfn(pnew);leval++;}
                     catch(...){
                         std::cout<<"Error in objfn function evaluation";
                         return sqobjnull;
@@ -212,7 +195,7 @@ SquaremOutput squarem1(std::vector<double> par,std::vector<double> testingY){
             }else{lnewcpp=loldcpp;}
             if (lnewcpp>loldcpp+SquaremDefault.objfninc) {
                 pnew=p2cpp;
-                try{lnewcpp=objfn(pnew,testingY);leval++;}
+                try{lnewcpp=objfn(pnew);leval++;}
                 catch(...){
                     std::cout<<"Error in objfn function evaluation";
                     return sqobjnull;
@@ -224,20 +207,18 @@ SquaremOutput squarem1(std::vector<double> par,std::vector<double> testingY){
                 extrap=false;
             }
         }
-        
-        
         if(alpha==stepmax){stepmax=SquaremDefault.mstep*stepmax;}
         if(stepmin<0 && alpha==stepmin){stepmin=SquaremDefault.mstep*stepmin;}
         
         pcpp=pnew;
         if(!std::isnan(lnewcpp)){loldcpp=lnewcpp;}
         if(SquaremDefault.trace){std::cout<<"Objective fn: "<<lnewcpp<<"  Extrapolation: "<<extrap<<"  Steplength: "<<alpha<<std::endl;}
-        
         iter++;
         //std::cout<<"leval="<<leval<<std::endl;//debugging
     }
+    
     if (feval >= SquaremDefault.maxiter){conv=false;}
-    if (!isfinite(SquaremDefault.objfninc)){loldcpp=objfn(pcpp,testingY);leval++;}
+    if (!isfinite(SquaremDefault.objfninc)){loldcpp=objfn(pcpp);leval++;}
     
     //assigning values
     sqobj.par=pcpp;
@@ -250,28 +231,73 @@ SquaremOutput squarem1(std::vector<double> par,std::vector<double> testingY){
 }
 
 
-/*TODO
-List squarem2(std::vector<double> par,Function fixptfn){
-    List sqobj;
-    return sqobj;
-}
-List cyclem1(std::vector<double> par,Function fixptfn,Function objfn){
-    List sqobj;
-    return sqobj;
-}
-List cyclem2(std::vector<double> par,Function fixptfn,Function objfn){
-    List sqobj;
-    return sqobj;
-}
 
-List squaremtest(std::vector<double> par,Function fixptfn,Function objfn){
-    List sqobj;
-    return sqobj;
-}
-*/
-//main() used for debugging in Xcode
+//main() used for demostration
+
+std::vector<int> Other_input1 {162,267,271,185,111,61,27,8,3,1};
+
 int main(){
-    std::cout<<"Hello "<<SquaremDefault.tol<<std::endl;
+    std::cout<<"Hi, this is a demostration using Poisson mixture!"<<std::endl;
+    std::vector<double> par_initial {0.5,3,1};//some random starting point,
+    SquaremOutput SQ_result=cxxSQUAREM(par_initial);
+    cout<<"Initial input vector:"<<endl;
+    for(int i=0;i<par_initial.size();i++) cout<<par_initial[i]<<" ";
+    cout<<"\nOutput vector by SQUAREM:"<<endl;
+    for(int i=0;i<par_initial.size();i++) cout<<SQ_result.par[i]<<" ";
+    cout<<"\nNumber of evaluations on fixed point function:"<<endl;
+    cout<<SQ_result.pfevals<<endl;
+    cout<<"Number of evaluations on objective function:"<<endl;
+    cout<<SQ_result.objfevals<<endl;
     return 0;
 }
 
+
+//Fixed point function and objective function that take only the vector for EM acceleration as input, while others are defined as global variables(const within the scope of cxxSQUAREM)
+
+vector<double> fixptfn(std::vector<double> par){
+    std::vector<double> parnew=par;
+    
+    std::vector<double> zi(Other_input1.size());
+    for (int i=0;i<Other_input1.size();i++){
+        zi[i]=par[0]*exp(-par[1])*pow(par[1],i)/(par[0]*exp(-par[1])*pow(par[1],i)+(1-par[0])*exp(-par[2])*pow(par[2],i));
+    }
+    
+    
+    double temp1,temp2;
+    //parnew[0]=1;
+    temp1=0,temp2=0;
+    for (int i=0;i<Other_input1.size();i++){
+        temp1+=Other_input1[i]*zi[i];
+        temp2+=Other_input1[i];
+    }
+    parnew[0]=temp1/temp2;
+    
+    
+    temp1=0,temp2=0;
+    for (int i=0;i<Other_input1.size();i++){
+        temp1+=Other_input1[i]*zi[i]*i;
+        temp2+=Other_input1[i]*zi[i];
+    }
+    parnew[1]=temp1/temp2;
+    
+    temp1=0,temp2=0;
+    for (int i=0;i<Other_input1.size();i++){
+        temp1+=Other_input1[i]*(1-zi[i])*i;
+        temp2+=Other_input1[i]*(1-zi[i]);
+    }
+    parnew[2]=temp1/temp2;
+    
+    return parnew;
+}
+
+
+double objfn(std::vector<double> par){
+    double objvalue=0;
+    vector<double> loglik(Other_input1.size());
+    for (int i=0;i<Other_input1.size();i++){
+    loglik[i]=Other_input1[i]*log(par[0]*exp(-par[1])*pow(par[1],i)/exp(lgamma(i+1))+
+        (1-par[0])*exp(-par[2])*pow(par[2],i)/exp(lgamma(i+1)));
+        objvalue-=loglik[i];
+    }
+    return objvalue;
+};
