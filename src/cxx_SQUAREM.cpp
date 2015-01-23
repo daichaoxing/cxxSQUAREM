@@ -45,7 +45,6 @@ vector<double> fixptfn(std::vector<double> par);
 double objfn(std::vector<double> par);
 SquaremOutput squarem1(std::vector<double> par);
 
-
 //Wrapper function
 SquaremOutput cxxSQUAREM(std::vector<double> par)
 {
@@ -104,8 +103,8 @@ SquaremOutput squarem1(std::vector<double> par){
         }
         sq2_scalar=0;
         for (int i=0;i<parvectorlength;i++){sq2_scalar+=pow(p2cpp[i]-p1cpp[i],2);}
-        sq2_scalar=sqrt(sq2_scalar);
-        if (sq2_scalar<SquaremDefault.tol){break;}
+        //sq2_scalar=sqrt(sq2_scalar);
+        if (sqrt(sq2_scalar)<SquaremDefault.tol){break;}
         sv2_scalar=0;
         for (int i=0;i<parvectorlength;i++){sv2_scalar+=pow(p2cpp[i]-2*p1cpp[i]+pcpp[i],2);}
         srv_scalar=0;
