@@ -1,25 +1,10 @@
-//TODO:
-//1. Exception Handling, try&catch 1.Done
-//2. additional input to each of the functions
-//3. Test squarem1 on R and compare with the result by original package
-//4. If squarem1 passed,then implement the other 3+1 functions
-//5. Search for cpp equivalent 	coef <- try(solve(qr(crossprod(U), LAPACK=TRUE, tol=1.e-14), rep(1,K+1)), silent=TRUE)
-//6. Search for cpp equivalent 	coef <- try(solve(qr(U[,-(K+1)], LAPACK=TRUE, tol=1.e-14), -U[,K+1]), silent=TRUE)
-//7. Allow user to specify the control variables
-
-//Increase # of inputs: testingY
-//GITHUB implementation
-//Increase # of functions
-//SEXP pointer?
 
 #include <iostream>
 #include <string>
 #include <algorithm>
 #include <Rcpp.h>
-//#include <RInside.h>
 #include <cmath>
 #include <math.h>
-//#include <stdarg.h>
 
 using namespace Rcpp;
 
@@ -289,12 +274,3 @@ List squaremtest(NumericVector par,Function fixptfn,Function objfn){
     List sqobj;
     return sqobj;
 }
-
-//main() used for debugging in Xcode
-int main(){
-    std::cout<<"Hello "<<tol<<std::endl;
-    double tol1=tol*10000000;
-    std::cout<<"Hello "<<tol1<<std::endl;
-    return 0;
-}
-
